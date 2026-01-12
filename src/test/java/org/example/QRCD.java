@@ -6,6 +6,7 @@ import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
@@ -15,12 +16,22 @@ import java.util.List;
 public class QRCD {
     static WebDriver driver;
 
+
     public static void main(String[] args) throws InterruptedException {
         try {
-            // Remove WebDriverManager - Selenium 4.6+ has built-in driver management
-            driver = new ChromeDriver();
+
+            System.setProperty(
+                    "webdriver.edge.driver",
+                    "C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (1)\\msedgedriver.exe"
+            );
+
+
+            driver = new EdgeDriver();
             driver.manage().window().maximize();
+            driver.manage().deleteAllCookies();
+            System.out.println("Cache Cleared Successfully");
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+
             // ✅ Set browser zoom to 75%
             JavascriptExecutor js = (JavascriptExecutor) driver;
             driver.get("https://www.bajajfinserv.in/qr-code-web-page?xc=S44WV9hZrWEnQtNNlmJAx8BzqKUBhftHrdWXQwxuT4xSlrJbUr8Nm0ri14G4Mf7OCYMKtMPvAwVYTrwMMxLcAemePYhCXHoM0WDdHO9N7sn/WQ/SdmINjyN3hljE2tc/M9uo/6HWAI1dwuHqYEq6tJ8kUuF/IjZQIa5D1oWcOPs8H1nfU0ASKwZz4sRJ4tYm&utm_source=ACMS");
@@ -41,6 +52,7 @@ public class QRCD {
                 System.out.println("Consent Clicked Successfully");
             } catch (Exception e) {
                 System.out.println("❌ Failed to click 'Consent': " + e.getMessage());
+
             }
 
             // Step 2: Click on Get OTP CTA
