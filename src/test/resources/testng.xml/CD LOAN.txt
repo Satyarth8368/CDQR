@@ -1,0 +1,583 @@
+package org.example;
+
+
+import org.openqa.selenium.*;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.Assert;
+import java.time.Duration;
+import java.util.List;
+
+public class CDf {
+    private static WebDriver driver;
+
+    public static void main(String[] args) throws InterruptedException {
+//        System.setProperty("webdriver.chrome.driver", "C:\\Driver\\chromedriver.exe");
+
+        driver = new ChromeDriver();
+
+        driver.manage().window().maximize();
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+
+        driver.get("https://www.bajajfinserv.in/");
+        System.out.println("Page title: " + driver.getTitle());
+
+        // Step 1: Click on 'Instant Approval'
+        wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("img[alt='Instant Approval image']"))).click();
+
+        // Step 2: Click on video text
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//span[contains(@class, 'key-features-wrapper__video__text')]"))).click();
+
+        // Step 3: Wait for modal and close it
+        System.out.println("⏳ Waiting for 15 seconds before closing modal...");
+        Thread.sleep(15000);
+        wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("button[aria-label='Close']"))).click();
+        System.out.println("✅ Modal closed");
+
+        // Step 4: Click Apply Now CTA
+        wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector(".primary-apply-cta"))).click();
+
+        // Step 5: Enter mobile number inside Shadow DOM
+        WebElement shadowHost = driver.findElement(By.cssSelector("app-onboarding-landing"));
+        SearchContext shadowRoot = shadowHost.getShadowRoot();
+        WebElement mobileInput = shadowRoot.findElement(By.cssSelector("input.onb-input-field"));
+        mobileInput.sendKeys("8368818127");
+        System.out.println("✅ Mobile number entered inside Shadow DOM");
+
+        // Step 6: Verify Shadow DOM Title is visible
+//        try {
+//            String shadowElementSelector = "h1.onb-h1.onb-signin-popup-title";
+//            Assert.assertFalse(isShadowElementDisplayed(shadowElementSelector),
+//                    "❌ Shadow DOM element not visible: " + shadowElementSelector);
+//            System.out.println("✅ Shadow DOM Title element is visible");
+//
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
+        // Step 7: Click GET OTP inside fresh Shadow DOM
+        try {
+            Thread.sleep(Long.parseLong("15000"));
+            SearchContext freshShadowRoot = driver.findElement(By.cssSelector("app-onboarding-landing")).getShadowRoot();
+            WebElement getOtpButton = new WebDriverWait(driver, Duration.ofSeconds(10))
+                    .until(d -> freshShadowRoot.findElement(By.cssSelector("button.onb-btn-orange")));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", getOtpButton);
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", getOtpButton);
+            System.out.println("✅ 'GET OTP' button clicked successfully via fresh ShadowRoot");
+        } catch (Exception e) {
+            System.out.println("❌ Failed to click 'GET OTP': " + e.getMessage());
+        }
+
+        // Step 8: Enter OTP AutoFetch inside Shadow DOM (otp1 → otp6)
+        try {
+            System.out.println("⏳ Fetching OTP via API...");
+            Otp_Scenario otpScenario = new Otp_Scenario();
+            String otp = otpScenario.calloperationlist("8368818127");   // <-- Fetch OTP from API
+            System.out.println("🎯 OTP Received: " + otp);
+
+            if (otp != null && otp.length() == 6) {
+                SearchContext otpShadowRoot = driver.findElement(By.cssSelector("app-onboarding-landing")).getShadowRoot();
+
+                for (int i = 0; i < otp.length(); i++) {
+                    String digit = String.valueOf(otp.charAt(i));
+                    String cssSelector = "input#otp" + (i + 1);  // otp1, otp2 … otp6
+                    WebElement otpInput = otpShadowRoot.findElement(By.cssSelector(cssSelector));
+                    otpInput.sendKeys(digit);
+                    if (i == otp.length() - 1) {
+                        otpInput.sendKeys(Keys.TAB);
+                    }
+                    System.out.println("✅ Digit " + digit + " entered in " + cssSelector);
+                }
+                System.out.println("✅ OTP entered successfully: " + otp);
+
+            } else {
+                System.out.println("⚠️ OTP not received or invalid length, fallback to manual wait...");
+                Thread.sleep(30000);
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Auto OTP fetch failed: " + e.getMessage());
+            Thread.sleep(30000); // fallback
+        }
+
+        // Step 9: Click Submit CTA inside Shadow DOM (Updated Implementation)
+        try {
+            shadowHost = driver.findElement(By.cssSelector("app-onboarding-landing"));
+            shadowRoot = shadowHost.getShadowRoot();
+            System.out.println("✅ ShadowRoot Retrieved for Submit button");
+
+            List<WebElement> buttons = shadowRoot.findElements(By.cssSelector("button.onb-btn-orange"));
+            boolean clicked = false;
+
+            for (WebElement button : buttons) {
+                if (button.getText().trim().equalsIgnoreCase("Submit")) {
+                    WebDriverWait waitSubmit = new WebDriverWait(driver, Duration.ofSeconds(20));
+                    waitSubmit.until(ExpectedConditions.elementToBeClickable(button));
+
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", button);
+                    button.click();
+
+                    System.out.println("✅ Step 9: 'SUBMIT' button clicked successfully");
+                    clicked = true;
+                    break;
+                }
+            }
+
+            if (!clicked) {
+                System.out.println("⚠️ Step 9: 'SUBMIT' button not found inside Shadow DOM");
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Step 9 Failed: Unable to click 'SUBMIT' → " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Step 10: Wait before next flow
+        Thread.sleep(30000);
+
+        // Step 11 onwards unchanged...
+        try {
+            WebDriverWait longWait = new WebDriverWait(driver, Duration.ofSeconds(30));
+            WebElement targetButton = longWait.until(ExpectedConditions.elementToBeClickable(
+                    By.cssSelector("button[class='btn--secondary fs-14 btn']")));
+            targetButton.click();
+            System.out.println("✅ Button with class 'btn--secondary fs-14 btn' clicked");
+        } catch (Exception e) {
+            System.out.println("❌ Failed to click button with class 'btn--secondary fs-14 btn': " + e.getMessage());
+        }
+
+        Thread.sleep(5000);
+
+        // Step 12
+        try {
+            WebElement nameInput = new WebDriverWait(driver, Duration.ofSeconds(10))
+                    .until(ExpectedConditions.elementToBeClickable(By.xpath("//input[@id='mat-input-0']")));
+            nameInput.click();
+            nameInput.sendKeys("Satyarth Singh");
+            System.out.println("✅ Name entered successfully: Satyarth Singh");
+        } catch (Exception e) {
+            System.out.println("❌ Failed to enter name: " + e.getMessage());
+        }
+
+        // Step 13: Continue CTA
+        try {
+            WebElement continueBtn = new WebDriverWait(driver, Duration.ofSeconds(10))
+                    .until(ExpectedConditions.elementToBeClickable(By.xpath("//*[@id=\"cdk-dialog-0\"]/microforms-experian-popup/div/div/div/div[4]/div[1]/div[3]/div/a")));
+            continueBtn.click();
+            System.out.println("✅ 'Continue' button clicked successfully");
+        } catch (Exception e) {
+            System.out.println("❌ Failed to click 'Continue' button: " + e.getMessage());
+        }
+
+        // Step 14: Proceed CTA in Save Time with Auto Fill popup
+//       try {
+//            Thread.sleep(5000);
+//            driver.findElement(By.cssSelector("div[class='microforms-modal-cta-primary ng-tns-c856712928-34'] a[class='ng-tns-c856712928-34']")).click();
+//            System.out.println("✅ Proceed CTA Successfully clicked");
+//        } catch (Exception e) {
+//            System.out.println("❌ Failed to click 'PROCEED': " + e.getMessage());
+//        }
+
+        // Step 15: Male gender radio button
+        try {
+            WebElement maleRadioButton = wait.until(
+                    ExpectedConditions.elementToBeClickable(By.id("mat-radio-2"))
+            );
+            maleRadioButton.click();
+            driver.findElement(By.id("mat-radio-2")).click();
+            System.out.println("✅ Step 15: Male gender radio button selected successfully");
+        } catch (TimeoutException e) {
+            System.out.println("❌ Step 15 Failed: Male radio button not found: " + e.getMessage());
+        }
+
+        // Step 16: Continue on Gender Page
+        try {
+            driver.findElement(By.xpath("//span[normalize-space()='CONTINUE']")).click();
+            System.out.println("✅ Step 16 : Continue button clicked on Gender Page");
+
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Step 17: Continue on Date of Birth Page
+        try {
+            Thread.sleep(5000);
+            driver.findElement(By.xpath("//span[text()='CONTINUE']/ancestor::button")).click();
+            System.out.println("✅ Step 17 : Continue clicked on DOB Page ");
+        } catch (Exception e) {
+            System.out.println("❌ Step 17: Failed to click DOB Continue");
+        }
+
+        // Step 18: Continue on PAN Page
+        try {
+            Thread.sleep(5000);
+            WebElement continueButton = driver.findElement(By.cssSelector("button.orange-btn.mdc-button.mat-mdc-button"));
+            continueButton.click();
+            System.out.println("✅ Step 18 : Continue clicked on PAN Page ");
+        } catch (Exception e) {
+            System.out.println("❌ Step 18: Failed to click PAN Continue");
+        }
+
+        // Step 19 + Step 20: Employment Type selection + Continue
+        try {
+            // Add driver null check at the start
+            if (driver == null) {
+                throw new IllegalStateException("Driver is null at start of Step 19/20");
+            }
+
+            Thread.sleep(5000);
+            WebElement salariedLabel = new WebDriverWait(driver, Duration.ofSeconds(20))
+                    .until(ExpectedConditions.presenceOfElementLocated(
+                            By.xpath("/html/body/app-root/app-main/div/div[2]/div[1]/div/app-cd-loans-personal-details/div/personal-details/form/div/div[1]/mat-radio-group/div[1]/mat-radio-button/div/div/input")
+                    ));
+
+            // Add driver null check before using JavaScript
+            if (driver == null) {
+                throw new IllegalStateException("Driver became null before JavaScript click");
+            }
+
+            // Use JavaScript to click the hidden input
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js.executeScript("arguments[0].click();", salariedLabel);
+
+            Thread.sleep(500);
+
+            WebElement salariedInput = driver.findElement(By.id("mat-radio-6-input"));
+            boolean selected = isSelectedSafe(salariedInput);
+            if (!selected) {
+                // Force selection with JavaScript
+                js.executeScript("arguments[0].checked = true; arguments[0].dispatchEvent(new Event('change'));", salariedInput);
+                Thread.sleep(300);
+                selected = isSelectedSafe(salariedInput);
+            }
+
+            if (!selected) {
+                throw new RuntimeException("Salaried radio not selected after label click");
+            }
+            System.out.println("✅ Step 19: 'Salaried' selected");
+
+            // Add driver null check before finding continue button
+            if (driver == null) {
+                throw new IllegalStateException("Driver became null before Step 20");
+            }
+
+            WebElement continueBtnEmp = new WebDriverWait(driver, Duration.ofSeconds(15))
+                    .until(ExpectedConditions.elementToBeClickable(
+                            By.xpath("//button[.//span[normalize-space()='CONTINUE']]")
+                    ));
+
+            // Add driver null check before scrolling
+            if (driver == null) {
+                throw new IllegalStateException("Driver became null before scrollIntoViewCenter");
+            }
+
+            scrollIntoViewCenter(continueBtnEmp);
+            jsClick(continueBtnEmp);
+            System.out.println("✅ Step 20: Continue button clicked on Employment Page");
+
+        } catch (NullPointerException npe) {
+            System.out.println("❌ Step 19/20 Failed: " + npe.getMessage());
+            npe.printStackTrace();
+            // Re-throw to stop execution
+            throw new RuntimeException("Driver is null - cannot continue", npe);
+        } catch (Exception e) {
+            System.out.println("❌ Step 19/20 Failed: " + e.getMessage());
+            e.printStackTrace();
+            // Re-throw to stop execution
+            throw new RuntimeException("Step 19/20 failed - cannot continue", e);
+        }
+
+
+        // Step 21 : Need to Click on Continue CTA Of PIN CODE Page
+        try {
+            Thread.sleep(10000);
+            WebElement continueButton = driver.findElement(By.cssSelector("button[class*='mat-mdc-button'][class*='orange-btn']"));
+            continueButton.click();
+            System.out.println("✅ Step 21: Pin Code Continue button clicked successfully");
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Step 22 : Need to Click on first Check Box of Consent Page
+
+        try {
+            Thread.sleep(10000);
+            WebElement firstCheckbox = driver.findElement(By.cssSelector("input#mat-mdc-checkbox-4-input"));
+            firstCheckbox.click();
+            System.out.println("✅ Step 22: 1st Checkbox is clicked successfully");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+// Step 23 : Need to Click on SECOND Check Box of Consent Page
+        Thread.sleep(10000);
+        WebElement secondCheckbox = driver.findElement(By.cssSelector("input#mat-mdc-checkbox-5-input"));
+        secondCheckbox.click();
+        System.out.println("✅ Step 23: Second Checkbox clicked successfully");
+
+        // Step 24 : Need to Click on Continue CTA on Consent Page
+
+        Thread.sleep(10000);
+        WebElement continueButton = driver.findElement(By.xpath("//span[text()='CONTINUE']/parent::button"));
+        continueButton.click();
+        System.out.println("✅ Step 24: Continue button clicked successfully on Consent Page");
+
+
+    }
+
+    // ---------- Helpers ----------
+    private static void scrollIntoViewCenter(WebElement el) {
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", el);
+    }
+
+    private static void jsClick(WebElement el) {
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", el);
+    }
+
+    private static boolean isSelectedSafe(WebElement input) {
+        try {
+            return input.isSelected();
+        } catch (Exception e) {
+            return Boolean.TRUE.equals(((JavascriptExecutor) driver).executeScript("return !!arguments[0].checked;", input));
+        }
+    }
+
+    public static boolean isShadowElementDisplayed(String selector) {
+        try {
+            WebElement shadowHost = driver.findElement(By.cssSelector("app-onboarding-landing"));
+            SearchContext shadowRoot = shadowHost.getShadowRoot();
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+
+            Boolean isDisplayed = (Boolean) js.executeScript(
+                    "var element = arguments[0].querySelector(arguments[1]);" +
+                            "if (!element) return false;" +
+                            "var rect = element.getBoundingClientRect();" +
+                            "var style = window.getComputedStyle(element);" +
+                            "return rect.width > 0 && rect.height > 0 && " +
+                            "style.visibility !== 'hidden' && " +
+                            "style.display !== 'none' && " +
+                            "style.opacity !== '0';",
+                    shadowRoot, selector
+            );
+            return isDisplayed != null && isDisplayed;
+        } catch (Exception e) {
+            System.out.println("❌ Error checking shadow element visibility: " + e.getMessage());
+            return false;
+        }
+    }
+}
+
+
+
+POM'
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project
+        xmlns="http://maven.apache.org/POM/4.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>CDf</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <!-- Selenium 4.27.0 is the latest stable Java version -->
+        <selenium.version>4.27.0</selenium.version>
+
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Selenium -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+
+        <!-- WebDriverManager - REMOVED (Selenium Manager handles drivers automatically) -->
+        <!-- If you still need it, you can uncomment:
+        <dependency>
+            <groupId>io.github.bonigarcia</groupId>
+            <artifactId>webdrivermanager</artifactId>
+            <version>5.9.2</version>
+        </dependency>
+        -->
+
+        <!-- TestNG -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>7.11.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Jackson for JSON processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.18.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.1</version>
+        </dependency>
+
+        <!-- Apache Commons -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.27.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.17.0</version>
+        </dependency>
+
+        <!-- BouncyCastle for encryption support -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+
+        <!-- ExtentReports for test reporting -->
+        <dependency>
+            <groupId>com.aventstack</groupId>
+            <artifactId>extentreports</artifactId>
+            <version>5.1.2</version>
+        </dependency>
+
+        <!-- SLF4J API (required for proper logging with SLF4J 2.x) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.16</version>
+        </dependency>
+
+        <!-- Log4j2 for logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.24.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.24.1</version>
+        </dependency>
+
+        <!-- SLF4J Bridge for Log4j2 (updated to SLF4J 2.x compatible version) -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+            <version>2.24.1</version>
+        </dependency>
+
+        <!-- JSON processing -->
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+
+        <!-- Jakarta Mail for sending emails -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- Jakarta Activation (required by Jakarta Mail) -->
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>jakarta.activation</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Surefire Plugin for running tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                    </includes>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
+                    <useSystemClassLoader>true</useSystemClassLoader>
+                    <useManifestOnlyJar>false</useManifestOnlyJar>
+                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                    <printSummary>true</printSummary>
+
+                    <systemPropertyVariables>
+                        <file.encoding>UTF-8</file.encoding>
+                        <webdriver.chrome.verboseLogging>false</webdriver.chrome.verboseLogging>
+                        <webdriver.chrome.suppressInfoLogging>true</webdriver.chrome.suppressInfoLogging>
+                        <selenium.manager.log.level>SEVERE</selenium.manager.log.level>
+                    </systemPropertyVariables>
+
+                    <reportFormat>brief</reportFormat>
+                    <trimStackTrace>false</trimStackTrace>
+
+                    <argLine>
+                        -Dfile.encoding=UTF-8
+                        -Xmx1024m
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.util.logging=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                    </argLine>
+
+                    <testFailureIgnore>false</testFailureIgnore>
+                    <skip>false</skip>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Failsafe Plugin for integration tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+
+            <!-- Maven Site Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.12.1</version>
+            </plugin>
+
+            <!-- Surefire Report Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
