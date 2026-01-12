@@ -22,7 +22,7 @@ import org.json.JSONObject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonParser;
-
+import com.google.gson.*;
 public class Otp_Scenario  {
 
     public static String encrypt(String strToEncrypt, String secret, String type, String iv) {
