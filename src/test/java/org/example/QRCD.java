@@ -5,7 +5,6 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -18,11 +17,12 @@ public class QRCD {
 
 
     public static void main(String[] args) throws InterruptedException {
+        JavascriptExecutor js = null;
         try {
 
             System.setProperty(
                     "webdriver.edge.driver",
-                    "C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (1)\\msedgedriver.exe"
+                    "C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (2)\\msedgedriver.exe"
             );
 
 
@@ -33,7 +33,7 @@ public class QRCD {
             driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
 
             // ✅ Set browser zoom to 75%
-            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js = (JavascriptExecutor) driver;
             driver.get("https://www.bajajfinserv.in/qr-code-web-page?xc=S44WV9hZrWEnQtNNlmJAx8BzqKUBhftHrdWXQwxuT4xSlrJbUr8Nm0ri14G4Mf7OCYMKtMPvAwVYTrwMMxLcAemePYhCXHoM0WDdHO9N7sn/WQ/SdmINjyN3hljE2tc/M9uo/6HWAI1dwuHqYEq6tJ8kUuF/IjZQIa5D1oWcOPs8H1nfU0ASKwZz4sRJ4tYm&utm_source=ACMS");
             js.executeScript("document.body.style.zoom='75%'");
 
@@ -181,7 +181,7 @@ public class QRCD {
             System.out.println("❌ Not able to Enter Words");
         }
         // Step 9 : Need to Click Smart Watch from Drop Down
-        try{
+        try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
             WebElement smartWatch = wait.until(ExpectedConditions.elementToBeClickable(
                     By.xpath("//div[text()='SMART WATCH']")
@@ -197,7 +197,7 @@ public class QRCD {
         System.out.println("✅ User able to enter S words successfully");
 
 // Step 11 : Need to Click on Samsung Watch
-        try{
+        try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
             WebElement samsungwatch = wait.until(ExpectedConditions.elementToBeClickable(
                     By.xpath("//div[text()='SAMSUNG WATCH']")
@@ -214,7 +214,7 @@ public class QRCD {
         } catch (Exception e) {
             System.out.println("❌ Failed to click Continue CTA: " + e.getMessage());
         }
-
+        js.executeScript("document.body.style.zoom='80%'");
 // Step 13 : Need to Click on Product Model Field on Product Details Page
 
         try {
