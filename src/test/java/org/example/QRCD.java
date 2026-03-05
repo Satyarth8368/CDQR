@@ -253,6 +253,8 @@ public class QRCD {
 //        driver.get("https://www.bajajfinserv.in/myaccount/qr-cdloans/product-details");
 //        js.executeScript("document.body.style.zoom='90%'");
 //        Step 18 : Need to Click on Continue CTA
+        js.executeScript("document.body.style.zoom='75%'");
+
         try {
             driver.findElement(By.xpath("//button[contains(@class,'mat-mdc-button')]//span[text()='CONTINUE']")).click();
             System.out.println("✅ Continue CTA Clicked Successfully");
