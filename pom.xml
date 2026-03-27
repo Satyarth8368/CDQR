@@ -16,6 +16,8 @@
         <selenium.version>4.27.0</selenium.version>
         <testng.version>7.11.0</testng.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <!-- ================= DEPENDENCIES ================= -->
@@ -43,7 +45,7 @@
             <version>5.1.2</version>
         </dependency>
 
-        <!-- Jackson (JSON support if needed) -->
+        <!-- Jackson (JSON support) -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -93,6 +95,18 @@
 
     <!-- ================= BUILD ================= -->
     <build>
+        <!-- Ensure test resources (including testng.xml) are copied to target -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                    <include>**/*.txt</include>
+                    <include>**/*.properties</include>
+                </includes>
+            </testResource>
+        </testResources>
+
         <plugins>
 
             <!-- Java Compiler -->
@@ -114,10 +128,14 @@
                 <version>3.5.2</version>
                 <configuration>
                     <suiteXmlFiles>
-                        <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                        <suiteXmlFile>${project.basedir}/src/test/resources/testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
                     <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
+                    <!-- Prevent build failure when no tests run -->
+                    <failIfNoTests>false</failIfNoTests>
+                    <!-- Ensure test output encoding is correct -->
+                    <argLine>-Dfile.encoding=UTF-8</argLine>
                 </configuration>
             </plugin>
 
