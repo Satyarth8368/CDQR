@@ -12,7 +12,7 @@ import java.time.Duration;
 import java.util.List;
 
 
-public class QRCD {
+public class QRCDrural {
     static WebDriver driver;
 
 
@@ -34,7 +34,7 @@ public class QRCD {
 
             // ✅ Set browser zoom to 75%
             js = (JavascriptExecutor) driver;
-            driver.get("https://www.bajajfinserv.in/qr-code-web-page?xc=408Csix2AP3KPq1qQOtb++JV8Wq5s1j82OnhM4ZhgMyOD1uGWPk8t7VCadPyRZyUI+OMxWGO9FHXasH/Z15HDm2nOVA218f4J9UhC/TDBdeWQKV2ODgzIdpK+up18jTdq2X9W2EfA2Z2sGxgglzu8eXxT6LBBCygqJxDAsbgP8c=&utm_source=ACMS");
+            driver.get("https://www.bajajfinserv.in/qr-code-rural-web-page?xc=ZdRz9Q06BRmuhC1gsSNBiNMAy56iVhKKPM4iTSx8FjjDp3Vw4miMszZLCx52cIXuJE5kINOi5OXazye+3Ho/PQ==&utm_source=RURAL_ARU&utm_medium=OFFERMART_QR_GEN");
             js.executeScript("document.body.style.zoom='75%'");
 
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
@@ -42,7 +42,7 @@ public class QRCD {
 
             // Enter mobile number
             By mobileInputBy = By.xpath("//*[@id=\"container-a264ea1ca2\"]/div/div/div[1]/div/div[1]/div/div[3]/div/form/div[1]/input");
-            wait.until(ExpectedConditions.visibilityOfElementLocated(mobileInputBy)).sendKeys("9739241381");
+            wait.until(ExpectedConditions.visibilityOfElementLocated(mobileInputBy)).sendKeys("7030178232");
 
             // Step 1: Click consent checkbox
             try {
@@ -69,7 +69,7 @@ public class QRCD {
             try {
                 System.out.println("⏳ Fetching OTP via API...");
                 Otp_Scenario otpScenario = new Otp_Scenario();
-                String otp = otpScenario.calloperationlist("9739241381");
+                String otp = otpScenario.calloperationlist("7030178232");
                 System.out.println("🎯 OTP Received: " + otp);
 
                 if (otp != null && otp.length() == 6) {
@@ -311,3 +311,4 @@ public class QRCD {
         }
     }
 }
+
