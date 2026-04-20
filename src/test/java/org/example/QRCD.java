@@ -20,11 +20,8 @@ public class QRCD {
         JavascriptExecutor js = null;
         try {
 
-            System.setProperty(
-                    "webdriver.edge.driver",
-                    "C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (2)\\msedgedriver.exe"
-            );
-
+            System.setProperty("webdriver.edge.driver",
+                    "C:\\Users\\11024ss\\driver\\msedgedriver.exe");
 
             driver = new EdgeDriver();
             driver.manage().window().maximize();
@@ -163,6 +160,12 @@ public class QRCD {
         } catch (Exception e) {
             System.out.println("❌ Fatal error in Step 6: " + e.getMessage());
         }
+            // Step : MITC Check Box Click
+
+            Thread.sleep(Long.parseLong("10000"));
+            driver.findElement(By.xpath("//*[@id=\"mat-mdc-checkbox-1-input\"]")).click();
+            System.out.println("✅ Check box clicked successfully");
+
 
         // Step 7 : Continue CTA click on Amount Page
         try {
@@ -195,9 +198,11 @@ public class QRCD {
         Thread.sleep(Long.parseLong("15000"));
         driver.findElement(By.xpath("//*[@id=\"xmain__content\"]/app-product-selection/div/div[2]/form/div[2]/div[2]/input")).sendKeys("sa");
         System.out.println("✅ User able to enter S words successfully");
+        // Step 11 : Set Browser Zoom to 70 %
 
 // Step 11 : Need to Click on Samsung Watch
         try {
+            js.executeScript("window.scrollBy(0,500)");
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
             WebElement samsungwatch = wait.until(ExpectedConditions.elementToBeClickable(
                     By.xpath("//div[text()='SAMSUNG WATCH']")
@@ -214,7 +219,7 @@ public class QRCD {
         } catch (Exception e) {
             System.out.println("❌ Failed to click Continue CTA: " + e.getMessage());
         }
-        js.executeScript("document.body.style.zoom='80%'");
+
 // Step 13 : Need to Click on Product Model Field on Product Details Page
 
         try {
