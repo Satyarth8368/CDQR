@@ -21,8 +21,7 @@ public class QRCD {
         try {
 
             System.setProperty("webdriver.edge.driver",
-                    "C:\\Users\\11024ss\\driver\\msedgedriver.exe");
-
+                    "C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (4)\\msedgedriver.exe");
             driver = new EdgeDriver();
             driver.manage().window().maximize();
             driver.manage().deleteAllCookies();

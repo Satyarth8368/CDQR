@@ -20,11 +20,8 @@ public class QRCDrural {
         JavascriptExecutor js = null;
         try {
 
-            System.setProperty(
-                    "webdriver.edge.driver",
-                    "C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (2)\\msedgedriver.exe"
-            );
-
+            System.setProperty("webdriver.edge.driver",
+                    "\"C:\\Users\\11024ss\\Downloads\\edgedriver_win64 (4)\\msedgedriver.exe\"");
 
             driver = new EdgeDriver();
             driver.manage().window().maximize();
@@ -163,6 +160,9 @@ public class QRCDrural {
         } catch (Exception e) {
             System.out.println("❌ Fatal error in Step 6: " + e.getMessage());
         }
+        Thread.sleep(Long.parseLong("10000"));
+        driver.findElement(By.xpath("//*[@id=\"mat-mdc-checkbox-1-input\"]")).click();
+        System.out.println("✅ Check box clicked successfully");
 
         // Step 7 : Continue CTA click on Amount Page
         try {
