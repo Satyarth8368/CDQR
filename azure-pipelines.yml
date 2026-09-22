@@ -1,201 +1,129 @@
+# Continuous Integration pipeline for CDQR
+# Runs automatically for pushes and pull requests on the supported branches.
+
 trigger:
   branches:
     include:
-    - main
-    - QRCD
-    - develop
+      - main
+      - QRCD
+      - develop
   paths:
     exclude:
-    - README.md
-    - docs/
-    - '*.log'
+      - README.md
+      - docs/**
+      - '*.log'
+
+pr:
+  branches:
+    include:
+      - main
+      - QRCD
+      - develop
+
+# Set this variable to true only after the Selenium tests are made CI-safe
+# (headless browser, no hard-coded local driver path, and test credentials).
+variables:
+  mavenPomFile: 'pom.xml'
+  runSeleniumTests: 'false'
+  MAVEN_CACHE_FOLDER: '$(Pipeline.Workspace)/.m2/repository'
 
 pool:
   vmImage: 'windows-latest'
 
-variables:
-  buildConfiguration: 'Release'
-  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
-  mavenPomFile: '**/pom.xml'
-
 stages:
-- stage: Build
-  displayName: 'Build Stage'
-  jobs:
-  - job: BuildJob
-    displayName: 'Build and Compile'
-    steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
+  - stage: Build
+    displayName: 'Build and Package'
+    jobs:
+      - job: MavenBuild
+        displayName: 'Maven Clean, Compile and Package'
+        steps:
+          - checkout: self
+            clean: true
 
-    - task: Maven@3
-      displayName: 'Maven Clean'
-      inputs:
-        mavenPomFile: '$(mavenPomFile)'
-        mavenOptions: '-Xmx3072m'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
-        jdkArchitectureOption: 'x64'
-        publishJUnitResults: false
-        goals: 'clean'
+          - task: JavaToolInstaller@0
+            displayName: 'Use Java 11'
+            inputs:
+              versionSpec: '11'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
 
-    - task: Maven@3
-      displayName: 'Maven Compile'
-      inputs:
-        mavenPomFile: '$(mavenPomFile)'
-        mavenOptions: '-Xmx3072m'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
-        jdkArchitectureOption: 'x64'
-        publishJUnitResults: false
-        goals: 'compile'
+          - task: Cache@2
+            displayName: 'Cache Maven dependencies'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | $(mavenPomFile)'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: '$(MAVEN_CACHE_FOLDER)'
 
-    - task: Maven@3
-      displayName: 'Maven Package'
-      inputs:
-        mavenPomFile: '$(mavenPomFile)'
-        mavenOptions: '-Xmx3072m'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
-        jdkArchitectureOption: 'x64'
-        publishJUnitResults: false
-        goals: 'package -DskipTests'
+          - task: Maven@3
+            displayName: 'Maven clean package'
+            inputs:
+              mavenPomFile: '$(mavenPomFile)'
+              mavenOptions: '-Xmx3072m'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: false
+              goals: 'clean package -DskipTests'
+              options: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
 
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Build Artifacts'
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: 'maven-build'
-        publishLocation: 'Container'
-      condition: always()
+          - task: CopyFiles@2
+            displayName: 'Stage build files'
+            inputs:
+              sourceFolder: '$(Build.SourcesDirectory)'
+              contents: |
+                target/*.jar
+                pom.xml
+              targetFolder: '$(Build.ArtifactStagingDirectory)'
+              flattenFolders: false
 
-- stage: Test
-  displayName: 'Test Stage'
-  dependsOn: Build
-  condition: succeeded()
-  jobs:
-  - job: TestJob
-    displayName: 'Run Selenium Tests'
-    steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Maven build artifact'
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'maven-build'
+              publishLocation: 'Container'
 
-    - task: Maven@3
-      displayName: 'Run QRCD Tests'
-      inputs:
-        mavenPomFile: '$(mavenPomFile)'
-        mavenOptions: '-Xmx3072m'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
-        jdkArchitectureOption: 'x64'
-        publishJUnitResults: true
-        testResultsFiles: '**/surefire-reports/TEST-*.xml'
-        goals: 'test -Dtest=QRCD -DforkCount=1 -DreuseForks=false'
-      continueOnError: true
+  # Disabled by default because the current Selenium code contains local
+  # EdgeDriver paths and live OTP/mobile-number data. Enable only after those
+  # values are moved to secure pipeline variables and the browser is headless.
+  - stage: SeleniumTests
+    displayName: 'Selenium Tests (Optional)'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['runSeleniumTests'], 'true'))
+    jobs:
+      - job: SeleniumTestJob
+        displayName: 'Run Selenium tests'
+        timeoutInMinutes: 30
+        steps:
+          - checkout: self
 
-    - task: PublishTestResults@2
-      displayName: 'Publish Test Results'
-      inputs:
-        testResultsFormat: 'JUnit'
-        testResultsFiles: '**/surefire-reports/TEST-*.xml'
-        searchFolder: '$(System.DefaultWorkingDirectory)'
-        mergeTestResults: false
-        testRunTitle: 'QRCD Selenium Tests'
-        failTaskOnFailedTests: false
-      condition: always()
+          - task: JavaToolInstaller@0
+            displayName: 'Use Java 11'
+            inputs:
+              versionSpec: '11'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
 
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Test Reports'
-      inputs:
-        pathToPublish: '$(System.DefaultWorkingDirectory)/target/surefire-reports'
-        artifactName: 'test-reports'
-        publishLocation: 'Container'
-      condition: always()
+          - task: Maven@3
+            displayName: 'Run Maven tests'
+            inputs:
+              mavenPomFile: '$(mavenPomFile)'
+              mavenOptions: '-Xmx3072m'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: true
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              goals: 'test'
+              options: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
 
-- stage: CodeQuality
-  displayName: 'Code Quality Stage'
-  dependsOn: Test
-  condition: succeeded()
-  jobs:
-  - job: SonarAnalysisJob
-    displayName: 'SonarQube Analysis'
-    steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
-
-    - task: Maven@3
-      displayName: 'SonarQube Analysis'
-      inputs:
-        mavenPomFile: '$(mavenPomFile)'
-        mavenOptions: '-Xmx3072m'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
-        jdkArchitectureOption: 'x64'
-        publishJUnitResults: false
-        goals: 'verify sonar:sonar -Dsonar.projectKey=CDQR-Selenium -Dsonar.projectName="CDQR Selenium Tests"'
-      continueOnError: true
-      condition: eq(variables['runSonarQube'], 'true')
-
-- stage: Package
-  displayName: 'Package Stage'
-  dependsOn: CodeQuality
-  condition: succeeded()
-  jobs:
-  - job: PackageJob
-    displayName: 'Create Deployment Package'
-    steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
-
-    - task: Maven@3
-      displayName: 'Final Maven Build'
-      inputs:
-        mavenPomFile: '$(mavenPomFile)'
-        mavenOptions: '-Xmx3072m'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '1.11'
-        jdkArchitectureOption: 'x64'
-        publishJUnitResults: false
-        goals: 'clean package'
-
-    - task: CopyFiles@2
-      displayName: 'Copy Build Artifacts'
-      inputs:
-        sourceFolder: '$(System.DefaultWorkingDirectory)/target'
-        contents: '**/*.jar'
-        targetFolder: '$(Build.ArtifactStagingDirectory)/libs'
-
-    - task: CopyFiles@2
-      displayName: 'Copy POM and Source'
-      inputs:
-        sourceFolder: '$(System.DefaultWorkingDirectory)'
-        contents: 'pom.xml'
-        targetFolder: '$(Build.ArtifactStagingDirectory)'
-
-    - task: ArchiveFiles@2
-      displayName: 'Create Deployment Package'
-      inputs:
-        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)'
-        includeRootFolder: false
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/CDQR-$(Build.BuildId).zip'
-        replaceExistingArchive: true
-
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Final Artifacts'
-      inputs:
-        pathToPublish: '$(Build.ArtifactStagingDirectory)'
-        artifactName: 'drop'
-        publishLocation: 'Container'
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish test reports'
+            condition: always()
+            inputs:
+              pathToPublish: '$(System.DefaultWorkingDirectory)/target/surefire-reports'
+              artifactName: 'test-reports'
+              publishLocation: 'Container'
+              "
